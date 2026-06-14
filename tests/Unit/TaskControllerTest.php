@@ -7,7 +7,8 @@ namespace Orchestrator\Tests\Unit;
 use Orchestrator\Http\Controller\TaskController;
 use Orchestrator\Task\TaskService;
 use PHPUnit\Framework\TestCase;
-use Slim\Psr7\Factory\ResponseFactory;
+use Slim\Psr7\Factory\StreamFactory;
+use Slim\Psr7\Factory\UriFactory;
 use Slim\Psr7\Request;
 use Slim\Psr7\Response;
 
@@ -27,13 +28,25 @@ class TaskControllerTest extends TestCase
         return json_decode((string) $response->getBody(), true);
     }
 
+    private function createRequest(string $method, string $uri, ?array $parsedBody = null): Request
+    {
+        $factory = new \Slim\Psr7\Factory\ServerRequestFactory();
+        $request = $factory->createServerRequest($method, $uri);
+
+        if ($parsedBody !== null) {
+            $request = $request->withParsedBody($parsedBody);
+        }
+
+        return $request;
+    }
+
     public function testListTasksReturns200(): void
     {
         $this->taskService
             ->method('listAllTasks')
             ->willReturn(['tasks' => [['cn' => ['mail']]]]);
 
-        $request = new Request('GET', '/api/tasks');
+        $request = $this->createRequest('GET', '/api/tasks');
         $response = new Response();
 
         $result = $this->controller->listTasks($request, $response);
@@ -49,7 +62,7 @@ class TaskControllerTest extends TestCase
             ->with('GET', 'mail', null)
             ->willReturn(['dn' => 'cn=test']);
 
-        $request = new Request('GET', '/api/tasks/mail');
+        $request = $this->createRequest('GET', '/api/tasks/mail');
         $response = new Response();
         $args = ['objectType' => 'mail'];
 
@@ -65,7 +78,7 @@ class TaskControllerTest extends TestCase
             ->method('handleTask')
             ->willThrowException(new \RuntimeException('Task not found', 404));
 
-        $request = new Request('GET', '/api/tasks/unknown');
+        $request = $this->createRequest('GET', '/api/tasks/unknown');
         $response = new Response();
         $args = ['objectType' => 'unknown'];
 
@@ -81,7 +94,7 @@ class TaskControllerTest extends TestCase
             ->method('removeSubTasks')
             ->willReturn(['updated' => ['cn=sub1']]);
 
-        $request = new Request('PATCH', '/api/tasks/removeSubTasks');
+        $request = $this->createRequest('PATCH', '/api/tasks/removeSubTasks');
         $response = new Response();
 
         $result = $this->controller->removeSubTasks($request, $response);
@@ -96,7 +109,7 @@ class TaskControllerTest extends TestCase
             ->method('activateCyclicTasks')
             ->willReturn(['dn=test' => ['result' => 'ok']]);
 
-        $request = new Request('PATCH', '/api/tasks/activateCyclicTasks');
+        $request = $this->createRequest('PATCH', '/api/tasks/activateCyclicTasks');
         $response = new Response();
 
         $result = $this->controller->activateCyclicTasks($request, $response);
@@ -110,8 +123,7 @@ class TaskControllerTest extends TestCase
             ->method('restartFailedTasks')
             ->willReturn(['updated' => []]);
 
-        $request = (new Request('PATCH', '/api/tasks/restartFailedTasks'))
-            ->withParsedBody([]);
+        $request = $this->createRequest('PATCH', '/api/tasks/restartFailedTasks', []);
         $response = new Response();
 
         $result = $this->controller->restartFailedTasks($request, $response);

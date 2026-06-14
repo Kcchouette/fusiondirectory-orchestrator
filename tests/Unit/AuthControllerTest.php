@@ -7,9 +7,9 @@ namespace Orchestrator\Tests\Unit;
 use Orchestrator\Auth\JWTCodec;
 use Orchestrator\Http\Controller\AuthController;
 use Orchestrator\Auth\UserGateway;
-use Orchestrator\Auth\RefreshTokenGateway;
 use PHPUnit\Framework\TestCase;
-use Slim\Psr7\Factory\ResponseFactory;
+use Slim\Psr7\Factory\StreamFactory;
+use Slim\Psr7\Factory\UriFactory;
 use Slim\Psr7\Request;
 use Slim\Psr7\Response;
 
@@ -17,12 +17,10 @@ class AuthControllerTest extends TestCase
 {
     private AuthController $controller;
     private JWTCodec $codec;
-    private ResponseFactory $responseFactory;
 
     protected function setUp(): void
     {
         $this->codec = new JWTCodec('test-secret');
-        $this->responseFactory = new ResponseFactory();
 
         $this->controller = new AuthController(
             $this->codec,
@@ -35,10 +33,21 @@ class AuthControllerTest extends TestCase
         return json_decode((string) $response->getBody(), true);
     }
 
+    private function createRequest(string $method, string $uri, ?array $parsedBody = null): Request
+    {
+        $factory = new \Slim\Psr7\Factory\ServerRequestFactory();
+        $request = $factory->createServerRequest($method, $uri);
+
+        if ($parsedBody !== null) {
+            $request = $request->withParsedBody($parsedBody);
+        }
+
+        return $request;
+    }
+
     public function testLoginReturns400WhenMissingCredentials(): void
     {
-        $request = (new Request('POST', '/api/login'))
-            ->withParsedBody([]);
+        $request = $this->createRequest('POST', '/api/login', []);
 
         $response = $this->controller->login($request, new Response());
 
@@ -53,8 +62,7 @@ class AuthControllerTest extends TestCase
 
         $controller = new AuthController($this->codec, $userGateway);
 
-        $request = (new Request('POST', '/api/login'))
-            ->withParsedBody(['username' => 'user', 'password' => 'wrong']);
+        $request = $this->createRequest('POST', '/api/login', ['username' => 'user', 'password' => 'wrong']);
 
         $response = $controller->login($request, new Response());
 
@@ -64,8 +72,7 @@ class AuthControllerTest extends TestCase
 
     public function testLogoutReturns400WhenMissingToken(): void
     {
-        $request = (new Request('POST', '/api/logout'))
-            ->withParsedBody([]);
+        $request = $this->createRequest('POST', '/api/logout', []);
 
         $response = $this->controller->logout($request, new Response());
 
@@ -75,8 +82,7 @@ class AuthControllerTest extends TestCase
 
     public function testLogoutReturns400WhenInvalidToken(): void
     {
-        $request = (new Request('POST', '/api/logout'))
-            ->withParsedBody(['token' => 'invalid-token']);
+        $request = $this->createRequest('POST', '/api/logout', ['token' => 'invalid-token']);
 
         $response = $this->controller->logout($request, new Response());
 
@@ -86,8 +92,7 @@ class AuthControllerTest extends TestCase
 
     public function testRefreshReturns400WhenMissingToken(): void
     {
-        $request = (new Request('POST', '/api/refresh'))
-            ->withParsedBody([]);
+        $request = $this->createRequest('POST', '/api/refresh', []);
 
         $response = $this->controller->refresh($request, new Response());
 
@@ -97,8 +102,7 @@ class AuthControllerTest extends TestCase
 
     public function testRefreshReturns400WhenInvalidToken(): void
     {
-        $request = (new Request('POST', '/api/refresh'))
-            ->withParsedBody(['token' => 'invalid-token']);
+        $request = $this->createRequest('POST', '/api/refresh', ['token' => 'invalid-token']);
 
         $response = $this->controller->refresh($request, new Response());
 

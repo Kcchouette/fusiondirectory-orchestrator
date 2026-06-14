@@ -35,6 +35,8 @@ class JwtAuthenticationMiddleware implements MiddlewareInterface
             return $this->jsonError(401, 'Invalid signature');
         } catch (TokenExpiredException) {
             return $this->jsonError(401, 'Token has expired');
+        } catch (\InvalidArgumentException) {
+            return $this->jsonError(400, 'Invalid token format');
         }
 
         $request = $request
