@@ -110,7 +110,7 @@ class TaskService
 
     private function resolveEndpoint(string $objectType): ?EndpointInterface
     {
-        $className = self::PLUGIN_MAP[$objectType] ?? null;
+        $className = self::PLUGIN_MAP[strtolower($objectType)] ?? null;
 
         if ($className === null || !class_exists($className)) {
             return null;
