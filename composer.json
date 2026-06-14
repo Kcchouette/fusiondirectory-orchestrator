@@ -1,0 +1,27 @@
+{
+  "name": "fusiondirectory/orchestrator",
+  "description": "FusionDirectory Orchestrator - Task automation engine",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.1",
+    "slim/slim": "^4.14",
+    "slim/psr7": "^1.6",
+    "php-di/php-di": "^7.0",
+    "vlucas/phpdotenv": "^5.6",
+    "phpmailer/phpmailer": "~6.1"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.0",
+    "phpstan/phpstan": "^1.10"
+  },
+  "autoload": {
+    "psr-4": {
+      "Orchestrator\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Orchestrator\\Tests\\": "tests/"
+    }
+  }
+}
