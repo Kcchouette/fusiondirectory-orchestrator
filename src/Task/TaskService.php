@@ -5,14 +5,25 @@ declare(strict_types=1);
 namespace Orchestrator\Task;
 
 use Orchestrator\Ldap\Ldap;
+use Orchestrator\Task\Plugin\EndpointInterface;
 
 class TaskService
 {
-    private TaskGateway $gateway;
+    private const PLUGIN_MAP = [
+        'mail' => Plugin\Mail::class,
+        'archive' => Plugin\Archive::class,
+        'audit' => Plugin\Audit::class,
+        'automaticGroups' => Plugin\AutomaticGroups::class,
+        'automaticGroupsDynamic' => Plugin\AutomaticGroups::class,
+        'extract' => Plugin\Extractor::class,
+        'lifeCycle' => Plugin\LifeCycle::class,
+        'notifications' => Plugin\Notifications::class,
+        'reminder' => Plugin\Reminder::class,
+    ];
 
-    public function __construct(Ldap $ldap)
-    {
-        $this->gateway = new TaskGateway($ldap);
+    public function __construct(
+        private readonly TaskGateway $gateway,
+    ) {
     }
 
     public function getGateway(): TaskGateway
@@ -38,15 +49,15 @@ class TaskService
 
         switch ($method) {
             case 'GET':
-                if (class_exists($objectType)) {
-                    $endpoint = new $objectType($this->gateway);
+                $endpoint = $this->resolveEndpoint($objectType);
+                if ($endpoint !== null) {
                     $result = $endpoint->processEndPointGet();
                 }
                 break;
 
             case 'POST':
-                if (class_exists($objectType)) {
-                    $endpoint = new $objectType($this->gateway);
+                $endpoint = $this->resolveEndpoint($objectType);
+                if ($endpoint !== null) {
                     $result = $endpoint->processEndPointPost($jsonBody);
                 }
                 break;
@@ -64,8 +75,8 @@ class TaskService
                         $result = $this->gateway->restartFailedSubtasks($taskName);
                         break;
                     default:
-                        if (class_exists($objectType)) {
-                            $endpoint = new $objectType($this->gateway);
+                        $endpoint = $this->resolveEndpoint($objectType);
+                        if ($endpoint !== null) {
                             $result = $endpoint->processEndPointPatch($jsonBody);
                         }
                         break;
@@ -95,5 +106,16 @@ class TaskService
     public function restartFailedTasks(?string $taskName = null): array
     {
         return $this->gateway->restartFailedSubtasks($taskName);
+    }
+
+    private function resolveEndpoint(string $objectType): ?EndpointInterface
+    {
+        $className = self::PLUGIN_MAP[$objectType] ?? null;
+
+        if ($className === null || !class_exists($className)) {
+            return null;
+        }
+
+        return new $className($this->gateway);
     }
 }
